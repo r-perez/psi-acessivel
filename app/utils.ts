@@ -69,3 +69,10 @@ export function useUser(): User {
 export function validateEmail(email: unknown): email is string {
   return typeof email === "string" && email.length > 3 && email.includes("@");
 }
+
+export function presence<T>(value: T | null | undefined): T | null {
+  if (typeof value === 'string') value = value.trim().replace(/\s+/g, " ") as T;
+
+  if (value !== "" && value !== null && value !== undefined) return value;
+  else return null;
+}
