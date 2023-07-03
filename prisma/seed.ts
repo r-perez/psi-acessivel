@@ -5,7 +5,8 @@ import { presence, validateEmail } from "~/utils";
 const prisma = new PrismaClient();
 
 async function seed() {
-  const sheetId = process.env.DRIVE_SHEET_ID;
+  const sheetId = presence(process.env.DRIVE_SHEET_ID);
+  if (!sheetId) return console.error(`Missing DRIVE_SHEET_ID env var.`);
 
   console.log(`Fetching data from Google Drive...`);
   const response = await fetch(
