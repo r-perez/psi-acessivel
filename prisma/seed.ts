@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { parse } from "csv-parse";
+import { presence, validateEmail } from "~/utils";
 
 const prisma = new PrismaClient();
 
@@ -38,37 +39,28 @@ async function seed() {
       }
 
       for (const record of records) {
-        if (!(record.crp && record.name && (record.phone || record.email))) {
+        if (!(extractCrp(record.crp) && record.name && (extractTelephone(record.phone) || extractEmail(record.email)))) {
           continue;
         }
 
-        let approaches = record.approaches.split(",")
-        if (approaches.length === 1) approaches = record.approaches.split("/")
-        if (approaches.length === 1) approaches = [record.approaches]
-        const approachesConnect = approaches.map((approach: string) => ({
-          where: { name: approach },
-          create: { name: approach },
-        }));
+        const approaches = extractApproaches(record.approaches);
+
+        const updateableFields = {
+          telephone: extractTelephone(record.phone),
+          email: extractEmail(record.email),
+          approaches: {
+            connectOrCreate: approaches,
+          },
+          address: presence(record.address),
+        }
 
         await prisma.therapist.upsert({
           where: { crp: record.crp },
-          update: {
-            telephone: record.phone || null,
-            email: record.email || null,
-            approaches: {
-              connectOrCreate: approachesConnect,
-            },
-            address: record.address || null,
-          },
+          update: updateableFields,
           create: {
-            name: record.name,
-            telephone: record.phone || null,
-            email: record.email || null,
-            approaches: {
-              connectOrCreate: approachesConnect,
-            },
-            crp: record.crp,
-            address: record.address || null,
+            name: presence(record.name),
+            crp: extractCrp(record.crp)!,
+            ...updateableFields
           },
         });
       }
@@ -86,3 +78,28 @@ seed()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+function extractApproaches(column: string) {
+  let approaches = column.split(",");
+  if (approaches.length === 1) approaches = column.split("/");
+  if (approaches.length === 1) approaches = [column];
+
+  const approachesConnect = approaches.map((approach: string) => ({
+    where: { name: approach },
+    create: { name: approach },
+  }));
+  return approachesConnect;
+}
+
+function extractTelephone(column: string) {
+  const numbers = presence(column)?.replace(/\D/g, "");
+  if (numbers?.length == 11 || numbers?.length == 10) return `+55${numbers}`;
+}
+
+function extractEmail(column: string) {
+  if (validateEmail(column)) return presence(column);
+}
+
+function extractCrp(column: string) {
+  return presence(column)?.replace(/\D/g, "");
+}
