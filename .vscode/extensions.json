@@ -3,6 +3,7 @@
     "dbaeumer.vscode-eslint",
     "heybourn.headwind",
     "bradlc.vscode-tailwindcss",
-    "prisma.prisma"
+    "prisma.prisma",
+    "alexcvzz.vscode-sqlite"
   ]
 }
